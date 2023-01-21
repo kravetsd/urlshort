@@ -1,0 +1,3 @@
+# github.com/gophercises/urlshort v0.0.0-20190723121003-cc800dbaf411
+## explicit
+github.com/gophercises/urlshort
