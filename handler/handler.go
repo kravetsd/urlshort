@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	"gopkg.in/yaml.v2"
@@ -19,19 +18,20 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 		path string
 		url  string
 	}
-	var pathUrls []pathUrl
+	pathUrls := []pathUrl{}
 	for path, url := range pathsToUrls {
 		pathUrls = append(pathUrls, pathUrl{path, url})
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		for _, pathUrl := range pathUrls {
-			if r.URL.Path == pathUrl.path {
-				http.Redirect(w, r, pathUrl.url, http.StatusFound)
+		for _, path := range pathUrls {
+			if path.path == r.URL.Path {
+				http.Redirect(w, r, path.url, http.StatusFound)
 				return
 			}
 		}
 		fallback.ServeHTTP(w, r)
 	}
+
 }
 
 // YAMLHandler will parse the provided YAML and then return
@@ -54,17 +54,17 @@ func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
 	// TODO: Implement this...
 	type pathUrl struct {
 		Path string `yaml:"path"`
-		URL  string `yaml:"url"`
+		Url  string `yaml:"url"`
 	}
-	var pathUrls []pathUrl
+	pathUrls := []pathUrl{}
 	err := yaml.Unmarshal(yml, &pathUrls)
 	if err != nil {
 		return nil, err
 	}
 	pathMap := make(map[string]string)
-	for _, pathUrl := range pathUrls {
-		pathMap[pathUrl.Path] = pathUrl.URL
+
+	for _, path := range pathUrls {
+		pathMap[path.Path] = path.Url
 	}
-	fmt.Println(pathMap)
 	return MapHandler(pathMap, fallback), err
 }
