@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 
 	"gopkg.in/yaml.v2"
@@ -13,25 +14,15 @@ import (
 // If the path is not provided in the map, then the fallback
 // http.Handler will be called instead.
 func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.HandlerFunc {
-	//	TODO: Implement this...
-	type pathUrl struct {
-		path string
-		url  string
-	}
-	pathUrls := []pathUrl{}
-	for path, url := range pathsToUrls {
-		pathUrls = append(pathUrls, pathUrl{path, url})
-	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		for _, path := range pathUrls {
-			if path.path == r.URL.Path {
-				http.Redirect(w, r, path.url, http.StatusFound)
-				return
-			}
+		if _, ok := pathsToUrls[r.URL.Path]; ok {
+			http.Redirect(w, r, pathsToUrls[r.URL.Path], http.StatusFound)
+			log.Default().Println("GOT it ! Redirecting to", pathsToUrls[r.URL.Path])
+			return
 		}
+		log.Default().Println("Redirecting to fallback")
 		fallback.ServeHTTP(w, r)
 	}
-
 }
 
 // YAMLHandler will parse the provided YAML and then return
@@ -51,20 +42,30 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 // See MapHandler to create a similar http.HandlerFunc via
 // a mapping of paths to urls.
 func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
-	// TODO: Implement this...
-	type pathUrl struct {
-		Path string `yaml:"path"`
-		Url  string `yaml:"url"`
-	}
+	pathUrls, err := urlUnmarshal(yml)
+	pathMap := pathMapUrls(pathUrls)
+	return MapHandler(pathMap, fallback), err
+}
+
+func urlUnmarshal(yml []byte) ([]pathUrl, error) {
 	pathUrls := []pathUrl{}
 	err := yaml.Unmarshal(yml, &pathUrls)
 	if err != nil {
 		return nil, err
 	}
+	return pathUrls, nil
+}
+
+func pathMapUrls(pathUrls []pathUrl) map[string]string {
 	pathMap := make(map[string]string)
 
 	for _, path := range pathUrls {
 		pathMap[path.Path] = path.Url
 	}
-	return MapHandler(pathMap, fallback), err
+	return pathMap
+}
+
+type pathUrl struct {
+	Path string `yaml:"path"`
+	Url  string `yaml:"url"`
 }
